@@ -7,20 +7,31 @@ local vim = game:GetService("VirtualInputManager")
 local lp = Players.LocalPlayer
 repeat task.wait() until lp
 
+-- SETTINGS
 local enabled = false
 local target = nil
 
+_G.HeadSize = 15
+_G.Disabled = true
+
+-- HITBOX EXCLUDE
+local excludeName = "Bn_Quangthuc"
+local hitboxEnabled = true
+
+-- SPEED
 local normalFly = 250
 local highFly = 500
 local startTeleportDistance = 18
 
 local bv
 
+-- TAP
 local function tap(x,y)
 	vim:SendTouchEvent(0, Enum.UserInputState.Begin, x, y)
 	vim:SendTouchEvent(0, Enum.UserInputState.End, x, y)
 end
 
+-- BV
 local function setupBV()
 	local c = lp.Character
 	if not c then return end
@@ -40,12 +51,14 @@ lp.CharacterAdded:Connect(function()
 	if enabled then setupBV() end
 end)
 
+-- FIX mất BV
 RunService.Heartbeat:Connect(function()
 	if enabled and not bv then
 		setupBV()
 	end
 end)
 
+-- NOCLIP
 RunService.Stepped:Connect(function()
 	if not enabled then return end
 	
@@ -59,6 +72,29 @@ RunService.Stepped:Connect(function()
 	end
 end)
 
+-- HITBOX (có loại trừ)
+task.spawn(function()
+	while true do
+		task.wait(0.2)
+		
+		if _G.Disabled and hitboxEnabled then
+			for _,v in pairs(Players:GetPlayers()) do
+				if v ~= lp and v.Character and v.Name ~= excludeName then
+					
+					local hrp = v.Character:FindFirstChild("HumanoidRootPart")
+					if hrp then
+						hrp.Size = Vector3.new(_G.HeadSize,_G.HeadSize,_G.HeadSize)
+						hrp.Transparency = 0.6
+						hrp.CanCollide = false
+					end
+					
+				end
+			end
+		end
+	end
+end)
+
+-- AUTO TARGET
 local function getAlivePlayers()
 	local t = {}
 	for _,plr in ipairs(Players:GetPlayers()) do
@@ -79,10 +115,11 @@ local function pickRandomTarget()
 	end
 end
 
+-- GUI
 local gui = Instance.new("ScreenGui", game.CoreGui)
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,230,0,260)
+frame.Size = UDim2.new(0,230,0,300)
 frame.Position = UDim2.new(0,80,0,120)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.Active = true
@@ -107,9 +144,21 @@ toggle.MouseButton1Click:Connect(function()
 	else if bv then bv:Destroy() bv=nil end end
 end)
 
+-- HITBOX TOGGLE BUTTON
+local hitboxBtn = Instance.new("TextButton", frame)
+hitboxBtn.Size = UDim2.new(1,0,0,30)
+hitboxBtn.Position = UDim2.new(0,0,0,75)
+hitboxBtn.Text = "Hitbox: ON"
+
+hitboxBtn.MouseButton1Click:Connect(function()
+	hitboxEnabled = not hitboxEnabled
+	hitboxBtn.Text = hitboxEnabled and "Hitbox: ON" or "Hitbox: OFF"
+end)
+
+-- PLAYER LIST
 local list = Instance.new("Frame", frame)
-list.Position = UDim2.new(0,0,0,75)
-list.Size = UDim2.new(1,0,1,-75)
+list.Position = UDim2.new(0,0,0,110)
+list.Size = UDim2.new(1,0,1,-110)
 list.BackgroundTransparency = 1
 
 local layout = Instance.new("UIListLayout", list)
@@ -138,6 +187,7 @@ updateList()
 Players.PlayerAdded:Connect(function() task.wait(1) updateList() end)
 Players.PlayerRemoving:Connect(updateList)
 
+-- AUTO HIT + AUTO TARGET
 task.spawn(function()
 	while true do
 		task.wait(0.08)
@@ -177,6 +227,7 @@ task.spawn(function()
 	end
 end)
 
+-- MAIN
 RunService.Heartbeat:Connect(function()
 
 	local char = lp.Character
